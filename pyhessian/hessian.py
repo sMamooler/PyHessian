@@ -63,13 +63,13 @@ class hessian():
 
         # pre-processing for single batch case to simplify the computation.
         if not self.full_dataset:
-            self.inputs, self.targets = self.data
+            self.inputs, self.targets, self.masks = self.data
             if self.device == 'cuda':
-                self.inputs, self.targets = self.inputs.cuda(
-                ), self.targets.cuda()
+                self.inputs, self.targets, self.masks = self.inputs.cuda(
+                ), self.targets.cuda(), self.masks.cuda()
 
             # if we only compute the Hessian information for a single batch data, we can re-use the gradients.
-            outputs = self.model(self.inputs)
+            outputs = self.model(self.inputs, self.masks)
             loss = self.criterion(outputs, self.targets)
             loss.backward(create_graph=True)
 
@@ -85,10 +85,10 @@ class hessian():
 
         THv = [torch.zeros(p.size()).to(device) for p in self.params
               ]  # accumulate result
-        for inputs, targets in self.data:
+        for inputs, targets, masks in self.data:
             self.model.zero_grad()
             tmp_num_data = inputs.size(0)
-            outputs = self.model(inputs.to(device))
+            outputs = self.model(inputs.to(device), masks.to(device))
             loss = self.criterion(outputs, targets.to(device))
             loss.backward(create_graph=True)
             params, gradsH = get_params_grad(self.model)
